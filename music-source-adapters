@@ -1,0 +1,24 @@
+#include <iostream>
+#include <string>
+#include "music_player_service.cpp"
+
+class YouTubeSource {
+public:
+    void connect() {
+        std::cout << "Connecting to YouTube.\n";
+    }
+    void stream(const std::string& videoId) {
+        std::cout << "Streaming YouTube video ID: " << videoId << "\n";
+    }
+};
+
+class YouTubeAdapter : public MusicSource {
+    YouTubeSource yt;
+public:
+    void initialize() override {
+        yt.connect();
+    }
+    void play(const Song& song) override {
+        yt.stream(song.title);
+    }
+};
