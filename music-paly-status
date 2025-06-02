@@ -1,0 +1,41 @@
+#include <iostream>
+#include "music_player_service.cpp"
+
+class PlayingState : public PlayerState {
+public:
+    void play(MusicPlayer* player) override {
+        std::cout << "Already playing.\n";
+    }
+    void pause(MusicPlayer* player) override {
+        player->notifyStateChange("Paused");
+    }
+    void stop(MusicPlayer* player) override {
+        player->notifyStateChange("Stopped");
+    }
+};
+
+class PausedState : public PlayerState {
+public:
+    void play(MusicPlayer* player) override {
+        player->notifyStateChange("Resumed");
+    }
+    void pause(MusicPlayer* player) override {
+        std::cout << "Already paused.\n";
+    }
+    void stop(MusicPlayer* player) override {
+        player->notifyStateChange("Stopped");
+    }
+};
+
+class StoppedState : public PlayerState {
+public:
+    void play(MusicPlayer* player) override {
+        player->play();
+    }
+    void pause(MusicPlayer* player) override {
+        std::cout << "Cannot pause. Player is stopped.\n";
+    }
+    void stop(MusicPlayer* player) override {
+        std::cout << "Already stopped.\n";
+    }
+};
