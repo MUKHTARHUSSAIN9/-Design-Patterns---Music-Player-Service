@@ -1,0 +1,157 @@
+
+
+#include <iostream>
+#include <vector>
+#include <string>
+#include <memory>
+#include <queue>
+#include <algorithm>
+
+class Song {
+public:
+    std::string title;
+    std::string artist;
+    Song(const std::string& t, const std::string& a) : title(t), artist(a) {}
+};
+
+class MusicSource {
+public:
+    virtual void initialize() = 0;
+    virtual void play(const Song& song) = 0;
+    virtual ~MusicSource() {}
+};
+
+class LocalFileSource : public MusicSource {
+public:
+    void initialize() override {
+        std::cout << "Initializing local file system.\n";
+    }
+    void play(const Song& song) override {
+        std::cout << "Playing local song: " << song.title << " by " << song.artist << "\n";
+    }
+};
+
+class SpotifySource : public MusicSource {
+public:
+    void initialize() override {
+        std::cout << "Connecting to Spotify.\n";
+    }
+    void play(const Song& song) override {
+        std::cout << "Streaming song from Spotify: " << song.title << " by " << song.artist << "\n";
+    }
+};
+
+class Observer {
+public:
+    virtual void onStateChange(const std::string& state) = 0;
+    virtual void onProgressUpdate(int currentTime, int duration) = 0;
+    virtual ~Observer() {}
+};
+
+class PlayerState {
+public:
+    virtual void play(class MusicPlayer* player) = 0;
+    virtual void pause(class MusicPlayer* player) = 0;
+    virtual void stop(class MusicPlayer* player) = 0;
+    virtual ~PlayerState() {}
+};
+
+class MusicPlayer {
+    static MusicPlayer* instance;
+    std::unique_ptr<MusicSource> source;
+    std::vector<Observer*> observers;
+    std::queue<Song> queue;
+    std::unique_ptr<PlayerState> state;
+    Song* currentSong;
+
+    MusicPlayer() : currentSong(nullptr) {}
+
+public:
+    static MusicPlayer* getInstance() {
+        if (!instance)
+            instance = new MusicPlayer();
+        return instance;
+    }
+
+    void setSource(MusicSource* src) {
+        source.reset(src);
+        source->initialize();
+    }
+
+    void attachObserver(Observer* obs) {
+        observers.push_back(obs);
+    }
+
+    void notifyStateChange(const std::string& state) {
+        for (auto obs : observers)
+            obs->onStateChange(state);
+    }
+
+    void notifyProgress(int currentTime, int duration) {
+        for (auto obs : observers)
+            obs->onProgressUpdate(currentTime, duration);
+    }
+
+    void addToQueue(const Song& song) {
+        queue.push(song);
+    }
+
+    void play() {
+        if (queue.empty()) return;
+        currentSong = &queue.front();
+        source->play(*currentSong);
+        notifyStateChange("Playing");
+    }
+
+    void pause() {
+        notifyStateChange("Paused");
+    }
+
+    void stop() {
+        notifyStateChange("Stopped");
+    }
+
+    void skip() {
+        if (!queue.empty()) {
+            queue.pop();
+            play();
+        }
+    }
+
+    void previous() {
+        notifyStateChange("Previous not implemented");
+    }
+};
+
+MusicPlayer* MusicPlayer::instance = nullptr;
+
+class ConsoleUI : public Observer {
+public:
+    void onStateChange(const std::string& state) override {
+        std::cout << "UI: Player state changed to: " << state << "\n";
+    }
+    void onProgressUpdate(int currentTime, int duration) override {
+        std::cout << "UI: Progress - " << currentTime << "/" << duration << " seconds\n";
+    }
+};
+
+int main() {
+    MusicPlayer* player = MusicPlayer::getInstance();
+    ConsoleUI ui;
+    player->attachObserver(&ui);
+
+    player->setSource(new LocalFileSource());
+    player->addToQueue(Song("Imagine", "John Lennon"));
+    player->addToQueue(Song("Let It Be", "The Beatles"));
+
+    player->play();
+    player->skip();
+    player->pause();
+    player->stop();
+
+    player->setSource(new SpotifySource());
+    player->addToQueue(Song("Blinding Lights", "The Weeknd"));
+    player->play();
+
+    return 0;
+}
